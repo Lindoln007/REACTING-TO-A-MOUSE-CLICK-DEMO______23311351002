@@ -1,4 +1,4 @@
-# Reacting to a Mouse Click — Event Delegation Demo
+# Reacting to a Mouse Click___Event Delegation Demo
 
 **Name:** Asante Mbaya  
 **Topic:** Reacting to a Mouse Click
