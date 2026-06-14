@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reacting to a Mouse Click — Event Delegation Demo</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #0d1b2a;
+      color: #cde;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 24px 16px;
+      gap: 14px;
+    }
+
+    header {
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.55rem;
+      color: #7ec8e3;
+      letter-spacing: 0.02em;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 0.88rem;
+      color: #8899aa;
+      max-width: 560px;
+      line-height: 1.5;
+    }
+
+    .subtitle code {
+      background: #1c2f40;
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: #a8d8f0;
+      font-size: 0.85em;
+    }
+
+    .scoreboard {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #ffd97d;
+      letter-spacing: 0.04em;
+    }
+
+    #game-area {
+      width: min(800px, 100%);
+      height: 500px;
+      background: #0a2540;
+      border: 2px solid #1e3a55;
+      border-radius: 14px;
+      position: relative;
+      cursor: crosshair;
+      overflow: hidden;
+      box-shadow: 0 0 40px rgba(0, 100, 180, 0.25);
+    }
+
+    .empty-hint {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #2a4560;
+      font-size: 1rem;
+      pointer-events: none;
+      user-select: none;
+      transition: opacity 0.4s;
+    }
+
+    .bubble {
+      position: absolute;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      /* Radial gradient gives a translucent soap-bubble look */
+      background: radial-gradient(
+        circle at 35% 30%,
+        rgba(255, 255, 255, 0.70) 0%,
+        rgba(130, 200, 255, 0.45) 30%,
+        rgba(40, 130, 220, 0.55) 65%,
+        rgba(10,  70, 160, 0.75) 100%
+      );
+      border: 1.5px solid rgba(180, 225, 255, 0.75);
+      box-shadow:
+        inset 0 -4px 8px rgba(0, 80, 180, 0.4),
+        0 0 12px rgba(80, 180, 255, 0.35);
+      cursor: pointer;
+      /* Center bubble on the click point */
+      transform: translate(-50%, -50%) scale(1);
+      animation: bubble-in 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    @keyframes bubble-in {
+      from { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+      to   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+
+    .bubble.popping {
+      animation: bubble-pop 0.28s ease-out forwards;
+      pointer-events: none;
+    }
+
+    @keyframes bubble-pop {
+      0%   { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
+      45%  { transform: translate(-50%, -50%) scale(1.55); opacity: 0.8; }
+      100% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
+    }
+
+    .hint {
+      font-size: 0.82rem;
+      color: #445566;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Reacting to a Mouse Click &mdash; Event Delegation Demo</h1>
+    <p class="subtitle">
+      A single <code>click</code> listener is attached to the game area container.
+      It handles <em>all</em> clicks — both spawning new bubbles and popping existing ones
+      — by inspecting <code>event.target</code> at runtime. No per-bubble listeners.
+    </p>
+  </header>
+
+  <div class="scoreboard">Score: <span id="score">0</span></div>
+
+  <div id="game-area">
+    <span class="empty-hint" id="hint-text">Click anywhere to spawn bubbles</span>
+  </div>
+
+  <p class="hint">Click empty space to spawn &nbsp;|&nbsp; Click a bubble to pop it</p>
+
+  <script>
+    const gameArea  = document.getElementById('game-area');
+    const scoreEl   = document.getElementById('score');
+    const hintText  = document.getElementById('hint-text');
+    let score = 0;
+    let bubbleCount = 0;
+
+    // ─── Event Delegation ────────────────────────────────────────────────────
+    // ONE listener on the parent handles every click inside the game area.
+    // We inspect event.target to decide what to do.
+    gameArea.addEventListener('click', function (event) {
+      if (event.target.classList.contains('bubble')) {
+        popBubble(event.target);       // clicked an existing bubble
+      } else {
+        spawnBubble(event);            // clicked empty space
+      }
+    });
+    // ─────────────────────────────────────────────────────────────────────────
+
+    function spawnBubble(event) {
+      const rect = gameArea.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      const bubble = document.createElement('div');
+      bubble.classList.add('bubble');
+      bubble.style.left = x + 'px';
+      bubble.style.top  = y + 'px';
+
+      gameArea.appendChild(bubble);
+
+      bubbleCount++;
+      hintText.style.opacity = '0';   // hide placeholder once bubbles exist
+    }
+
+    function popBubble(bubble) {
+      score++;
+      scoreEl.textContent = score;
+
+      bubble.classList.add('popping');
+      bubble.addEventListener('animationend', () => {
+        bubble.remove();
+        bubbleCount--;
+        if (bubbleCount === 0) hintText.style.opacity = '1';
+      }, { once: true });
+    }
+  </script>
+
+</body>
+</html>
